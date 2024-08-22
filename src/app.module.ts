@@ -8,6 +8,11 @@ import { ConfigModule } from '@nestjs/config';
 import dbConfig from './config/db.config';
 import dbConfigProduction from './config/db.config.production';
 import { LocationModule } from './location/location.module';
+import {
+  utilities as nestWinstonModuleUtilities,
+  WinstonModule,
+} from 'nest-winston';
+import * as winston from 'winston';
 
 @Module({
   imports: [
@@ -19,6 +24,22 @@ import { LocationModule } from './location/location.module';
     TypeOrmModule.forRootAsync({
       useFactory:
         process.env.NODE_ENV === 'production' ? dbConfigProduction : dbConfig,
+    }),
+    WinstonModule.forRoot({
+      transports: [
+        new winston.transports.Console({
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.ms(),
+            nestWinstonModuleUtilities.format.nestLike('MyApp', {
+              colors: true,
+              prettyPrint: true,
+              processId: true,
+              appName: true,
+            }),
+          ),
+        }),
+      ],
     }),
     LocationModule,
   ],
