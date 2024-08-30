@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Inject,
   Injectable,
   LoggerService,
@@ -44,6 +45,7 @@ export class LocationService {
       return this.locationRepository.save(location);
     } catch (error) {
       this.logger.error('Calling create()', error.stack, LocationService.name);
+      throw error;
     }
   }
 
@@ -56,6 +58,7 @@ export class LocationService {
       });
     } catch (error) {
       this.logger.error('Calling findAll()', error.stack, LocationService.name);
+      throw error;
     }
   }
 
@@ -71,6 +74,7 @@ export class LocationService {
       return location;
     } catch (error) {
       this.logger.error('Calling findOne()', error.stack, LocationService.name);
+      throw error;
     }
   }
 
@@ -79,7 +83,10 @@ export class LocationService {
     updateLocationDto: UpdateLocationDto,
   ): Promise<void> {
     try {
-      const location = await this.locationRepository.findOne({ where: { id } });
+      const location = await this.locationRepository.findOne({
+        where: { id },
+        relations: ['parent', 'children'],
+      });
 
       if (!location) {
         throw new NotFoundException(`Location with ID ${id} not found`);
@@ -89,11 +96,25 @@ export class LocationService {
         const parent = await this.locationRepository.findOne({
           where: { id: updateLocationDto.parentId },
         });
+
         if (!parent) {
           throw new NotFoundException(
             `Parent location with ID ${updateLocationDto.parentId} not found`,
           );
         }
+
+        // Check if the new parent is a descendant of the current location
+        const descendants = await this.getDescendants(location.id);
+        if (
+          descendants.some(
+            (descendant) => descendant.id === updateLocationDto.parentId,
+          )
+        ) {
+          throw new BadRequestException(
+            'Invalid parentId: A location cannot be a child of its own child or descendant.',
+          );
+        }
+
         location.parent = parent;
       }
 
@@ -102,7 +123,28 @@ export class LocationService {
       await this.locationRepository.save(location);
     } catch (error) {
       this.logger.error('Calling update()', error.stack, LocationService.name);
+      throw error;
     }
+  }
+
+  private async getDescendants(locationId: number): Promise<Location[]> {
+    const location = await this.locationRepository.findOne({
+      where: { id: locationId },
+      relations: ['children'],
+    });
+
+    if (!location || !location.children || location.children.length === 0) {
+      return [];
+    }
+
+    let descendants = [...location.children];
+
+    for (const child of location.children) {
+      const childDescendants = await this.getDescendants(child.id);
+      descendants = descendants.concat(childDescendants);
+    }
+
+    return descendants;
   }
 
   async delete(id: number) {
@@ -112,6 +154,7 @@ export class LocationService {
       });
     } catch (error) {
       this.logger.error('Calling delete()', error.stack, LocationService.name);
+      throw error;
     }
   }
 }
