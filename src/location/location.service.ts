@@ -13,6 +13,7 @@ import { Location } from '../entities/location.entity';
 import { PaginationDTO } from './dto/paginationDto';
 import { DEFAULT_PAGE_SIZE } from '../utils/constants';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Building } from 'src/entities/building.entity';
 
 @Injectable()
 export class LocationService {
@@ -21,11 +22,25 @@ export class LocationService {
     private locationRepository: Repository<Location>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
+    @InjectRepository(Building)
+    private buildingRepository: Repository<Building>,
   ) {}
 
   async create(createLocationDto: CreateLocationDto): Promise<Location> {
     try {
-      const location = this.locationRepository.create(createLocationDto);
+      const building = await this.buildingRepository.findOne({
+        where: { id: createLocationDto.buildingId },
+      });
+      if (!building) {
+        throw new NotFoundException(
+          `Building with ID ${createLocationDto.buildingId} not found`,
+        );
+      }
+
+      const location = this.locationRepository.create({
+        ...createLocationDto,
+        building,
+      });
 
       if (createLocationDto.parentId) {
         const parent = await this.locationRepository.findOne({
@@ -116,6 +131,18 @@ export class LocationService {
         }
 
         location.parent = parent;
+      }
+
+      if (updateLocationDto.buildingId) {
+        const building = await this.buildingRepository.findOne({
+          where: { id: updateLocationDto.buildingId },
+        });
+        if (!building) {
+          throw new NotFoundException(
+            `Building with ID ${updateLocationDto.buildingId} not found`,
+          );
+        }
+        location.building = building;
       }
 
       Object.assign(location, updateLocationDto);

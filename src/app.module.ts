@@ -12,6 +12,7 @@ import {
   utilities as nestWinstonModuleUtilities,
   WinstonModule,
 } from 'nest-winston';
+import { BuildingModule } from './building/building.module';
 import * as winston from 'winston';
 
 @Module({
@@ -42,6 +43,7 @@ import * as winston from 'winston';
       ],
     }),
     LocationModule,
+    BuildingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

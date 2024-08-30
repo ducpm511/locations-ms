@@ -4,9 +4,10 @@ import { LocationController } from './location.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Location } from 'src/entities/location.entity';
 import { APP_PIPE } from '@nestjs/core';
+import { Building } from 'src/entities/building.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Location])],
+  imports: [TypeOrmModule.forFeature([Location, Building])],
   controllers: [LocationController],
   providers: [
     {

@@ -4,14 +4,14 @@ export class CreateLocationDto {
   @IsNotEmpty()
   name: string;
 
-  @IsNotEmpty()
-  building: string;
-
   @IsNumber()
   area: number;
 
   @IsNotEmpty()
   locationCode: string;
+
+  @IsNotEmpty()
+  buildingId: number;
 
   @IsOptional()
   @IsNumber()
